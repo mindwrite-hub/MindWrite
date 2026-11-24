@@ -1,0 +1,1120 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>MINDWRITE TRADER // SOLANA BOT</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600;700&family=Fira+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* ============================================================================
+   MINDWRITE TRADER — DESIGN SYSTEM
+   Base:        Data-Dense Dashboard (BI/Analytics)
+   Supplement:  Real-Time Monitoring + Financial Dashboard
+   Accent:      HUD / Sci-Fi FUI
+   Palette:     Dark Mode (OLED)
+   Type:        Fira Code / Fira Sans
+   ============================================================================ */
+:root{
+  /* ---- surfaces (OLED) ---- */
+  --bg:#020617;
+  --surface:#0E1223;
+  --surface-2:#0A0E1C;
+  --surface-3:#070B16;
+  --muted:#1A1E2F;
+
+  /* ---- foreground (all >= 4.5:1 on --bg) ---- */
+  --fg:#F8FAFC;            /* 17.8:1 */
+  --fg-soft:#CBD5E1;       /* 12.4:1 — log/body copy */
+  --fg-muted:#94A3B8;      /*  7.3:1 — labels/secondary text */
+  --fg-dim:#64748B;        /*  3.9:1 — DECORATIVE ONLY (separators, scrollbar) */
+
+  /* ---- hairlines (HUD: 1px discipline) ---- */
+  --line:#1E2638;
+  --line-strong:#2A3449;
+  --hud:#22D3EE;
+  --hud-dim:rgba(34,211,238,.38);
+  --glow:0 0 10px;
+
+  /* ---- semantic data colors ---- */
+  --profit:#22C55E;        /* financial: profit / live */
+  --profit-soft:#34D399;
+  --loss:#EF4444;
+  --loss-soft:#FB7185;
+  --warn:#F59E0B;
+  --warn-soft:#FBBF24;
+  --info:#38BDF8;
+  --critical:#DC2626;
+  --neutral:#A855F7;
+
+  /* ---- data-dense rhythm tokens ---- */
+  --grid-gap:8px;
+  --card-pad:12px;
+  --fs-xs:9px;
+  --fs-sm:10px;
+  --fs-base:11px;
+  --fs-md:12px;
+  --row-h:28px;
+  --radius:6px;
+  --radius-sm:4px;
+
+  /* ---- motion tokens (context-aware, not one-size) ---- */
+  --t-micro:150ms;         /* hover/press feedback */
+  --t-state:240ms;         /* card + bar transitions */
+  --ease:cubic-bezier(.4,0,.2,1);
+  --pulse:pulse 2s cubic-bezier(.4,0,.6,1) infinite;
+
+  --focus:#FFFFFF;
+  --mono:'Fira Code', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --sans:'Fira Sans', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+}
+
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{background:var(--bg);color:var(--fg);font-family:var(--sans);-webkit-font-smoothing:antialiased}
+body{padding-bottom:1.5rem;min-height:100vh}
+::selection{background:rgba(34,197,94,.3)}
+svg{display:block}
+canvas{display:block;width:100%;height:100%}
+button{font-family:inherit;border:none;background:none;color:inherit;cursor:pointer}
+.mono{font-family:var(--mono)}
+.tnum{font-variant-numeric:tabular-nums}
+.b{font-weight:600}
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+
+/* ---- ACCESSIBILITY: visible focus, never removed ---- */
+:focus{outline:none}
+:focus-visible{outline:2px solid var(--focus);outline-offset:2px;border-radius:var(--radius-sm)}
+
+/* ---- ACCESSIBILITY: reduced motion → static final state ---- */
+@media (prefers-reduced-motion: reduce){
+  *,*::before,*::after{
+    animation-duration:.01ms !important;animation-iteration-count:1 !important;
+    transition-duration:.01ms !important;scroll-behavior:auto !important;
+  }
+}
+
+/* ---- touch targets expand on coarse pointers ---- */
+@media (pointer:coarse){
+  .tap{min-height:44px;min-width:44px}
+}
+
+.scroll::-webkit-scrollbar{width:6px;height:6px}
+.scroll::-webkit-scrollbar-track{background:transparent}
+.scroll::-webkit-scrollbar-thumb{background:var(--line-strong);border-radius:3px}
+.scroll::-webkit-scrollbar-thumb:hover{background:var(--fg-dim)}
+
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.45}}
+@keyframes ping{75%,100%{transform:scale(2.4);opacity:0}}
+@keyframes marquee{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+@keyframes flash{0%{background:rgba(34,211,238,.22)}100%{background:transparent}}
+@keyframes rowin{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}
+
+.wrap{max-width:1720px;margin:0 auto;padding:0 .75rem}
+@media(min-width:640px){.wrap{padding:0 1.25rem}}
+
+/* ============================ HEADER ============================ */
+header.topbar{position:sticky;top:0;z-index:30;background:rgba(2,6,23,.94);
+  backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+.topbar-inner{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;
+  gap:.5rem;padding:.5rem 0;min-height:56px}
+.brand{display:flex;align-items:center;gap:.625rem}
+.brand-logo{width:30px;height:30px;border-radius:var(--radius-sm);
+  background:linear-gradient(145deg,rgba(34,197,94,.18),rgba(34,211,238,.1));
+  border:1px solid var(--hud-dim);display:flex;align-items:center;justify-content:center;
+  font-family:var(--mono);font-weight:700;font-size:11px;color:var(--hud);
+  text-shadow:var(--glow) rgba(34,211,238,.55);position:relative}
+.brand-title{font-family:var(--mono);font-weight:700;font-size:13px;letter-spacing:.08em;color:var(--fg)}
+@media(max-width:640px){.brand-title{font-size:11px}}
+.brand-title .sep{color:var(--fg-dim)}
+.brand-title .accent{color:var(--profit-soft)}
+.brand-badge{font-size:var(--fs-sm);font-family:var(--mono);padding:3px 7px;border-radius:var(--radius-sm);
+  background:var(--surface-2);border:1px solid var(--line);color:var(--fg-muted);letter-spacing:.04em}
+@media(max-width:860px){.brand-badge{display:none}}
+
+.hmetrics{display:flex;flex-wrap:wrap;align-items:center;gap:.875rem;
+  font-family:var(--mono);font-size:var(--fs-base);font-variant-numeric:tabular-nums}
+@media(min-width:640px){.hmetrics{gap:1.25rem}}
+.hm{padding:2px 4px;border-radius:var(--radius-sm)}
+.hm.tick{animation:flash 700ms var(--ease)}
+.hm-label{color:var(--fg-muted);display:block;font-size:var(--fs-xs);letter-spacing:.07em;font-weight:500}
+.hm-val{font-weight:700;letter-spacing:.02em}
+.hide-sm{display:none}@media(min-width:640px){.hide-sm{display:block}}
+.hide-md{display:none}@media(min-width:768px){.hide-md{display:block}}
+
+.stream-btn{display:inline-flex;align-items:center;gap:.4rem;padding:7px 11px;border-radius:var(--radius-sm);
+  font-size:var(--fs-base);font-weight:600;letter-spacing:.04em;transition:background var(--t-micro) var(--ease),
+  border-color var(--t-micro) var(--ease);font-family:var(--mono)}
+.stream-btn.live{background:rgba(34,197,94,.14);color:var(--profit-soft);border:1px solid rgba(34,197,94,.42)}
+.stream-btn.live:hover{background:rgba(34,197,94,.26)}
+.stream-btn.paused{background:rgba(245,158,11,.14);color:var(--warn-soft);border:1px solid rgba(245,158,11,.42)}
+.stream-btn.paused:hover{background:rgba(245,158,11,.26)}
+.stream-btn svg{width:13px;height:13px}
+
+/* ticker — auto-rotating content: pausable, stops on reduced motion */
+.ticker{background:var(--surface-3);border-top:1px solid var(--line);padding:.3rem 0;overflow:hidden}
+.ticker-inner{display:flex;align-items:center;gap:.75rem;font-size:var(--fs-base);font-family:var(--mono)}
+.ticker-live{display:inline-flex;align-items:center;gap:.4rem;padding:3px 9px;border-radius:var(--radius-sm);
+  font-size:var(--fs-sm);font-weight:700;flex-shrink:0;letter-spacing:.06em}
+.ticker-live.on{background:rgba(220,38,38,.92);color:#fff}
+.ticker-live.off{background:var(--muted);color:var(--fg-muted)}
+.live-dot{position:relative;width:6px;height:6px}
+.live-dot span{position:absolute;inset:0;border-radius:9999px;background:#fff}
+.ticker-live.on .live-dot .ping{animation:ping 1.1s cubic-bezier(0,0,.2,1) infinite}
+.ticker-view{flex:1;overflow:hidden;white-space:nowrap;
+  -webkit-mask-image:linear-gradient(90deg,transparent,#000 3%,#000 97%,transparent);
+          mask-image:linear-gradient(90deg,transparent,#000 3%,#000 97%,transparent)}
+.ticker-track{display:inline-flex;gap:1.5rem;color:var(--fg-muted);animation:marquee 38s linear infinite;will-change:transform}
+.ticker-track.paused{animation-play-state:paused}
+.ticker-view:hover .ticker-track{animation-play-state:paused}
+.tk-item{display:inline-flex;align-items:center;gap:.4rem}
+.tk-tag{font-weight:700;letter-spacing:.06em}
+.tk-text{color:var(--fg-muted)}
+
+/* ============================ MAIN ============================ */
+main{padding-top:1rem}
+main .wrap > section{margin-bottom:var(--grid-gap)}
+@media(min-width:1024px){main .wrap > section{margin-bottom:12px}}
+
+/* HUD panel: hairline + corner tech markers */
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);
+  padding:var(--card-pad);position:relative}
+.card::before,.card::after{content:'';position:absolute;width:9px;height:9px;
+  border-color:var(--hud-dim);pointer-events:none;opacity:.75}
+.card::before{top:-1px;left:-1px;border-top:1px solid;border-left:1px solid;border-top-left-radius:var(--radius)}
+.card::after{bottom:-1px;right:-1px;border-bottom:1px solid;border-right:1px solid;border-bottom-right-radius:var(--radius)}
+.card-col{display:flex;flex-direction:column;justify-content:space-between}
+.inner{background:var(--surface-2);border:1px solid var(--line);border-radius:var(--radius-sm)}
+
+.mtitle{font-size:var(--fs-base);font-family:var(--mono);font-weight:700;letter-spacing:.09em;color:var(--fg)}
+.mtitle .sep{color:var(--fg-dim)}
+.mtitle::before{content:'▸ ';color:var(--hud);opacity:.7}
+.pill{font-size:var(--fs-sm);font-family:var(--mono);padding:2px 7px;border-radius:var(--radius-sm);letter-spacing:.05em}
+.pill-hud{background:rgba(34,211,238,.1);color:var(--hud);border:1px solid var(--hud-dim)}
+.row{display:flex;align-items:center;justify-content:space-between}
+.row-wrap{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:.5rem}
+.flC{display:flex;align-items:center}.gap2{gap:.5rem}.gap3{gap:.75rem}
+
+/* grids — data-dense 12-col */
+.grid-top{display:grid;grid-template-columns:1fr;gap:var(--grid-gap)}
+@media(min-width:1024px){.grid-top{grid-template-columns:repeat(12,1fr);gap:12px}
+  .gt-3{grid-column:span 3}.gt-6{grid-column:span 6}}
+.grid-den{display:grid;grid-template-columns:1fr;gap:var(--grid-gap);align-items:stretch}
+@media(min-width:1280px){.grid-den{grid-template-columns:repeat(12,1fr)}
+  .gd-3{grid-column:span 3}.gd-6{grid-column:span 6}}
+.grid-bottom{display:grid;grid-template-columns:1fr;gap:var(--grid-gap)}
+@media(min-width:1280px){.grid-bottom{grid-template-columns:repeat(12,1fr);gap:12px}
+  .gb-5{grid-column:span 5}.gb-7{grid-column:span 7}}
+.grid-tt{display:grid;grid-template-columns:1fr;gap:var(--grid-gap)}
+@media(min-width:768px){.grid-tt{grid-template-columns:1fr 1fr;gap:12px}}
+
+.c-profit{color:var(--profit-soft)}.c-info{color:var(--info)}.c-loss{color:var(--loss-soft)}
+.c-warn{color:var(--warn-soft)}.c-hud{color:var(--hud)}
+.c-fg{color:var(--fg)}.c-mut{color:var(--fg-muted)}.c-dim{color:var(--fg-muted)}
+
+/* ---- core model ---- */
+.train-box{background:var(--surface-2);border:1px solid var(--line);border-radius:var(--radius-sm);
+  padding:.5rem;margin-bottom:.75rem}
+.big-counter{font-size:32px;line-height:1;font-family:var(--mono);font-weight:700;color:var(--profit-soft);
+  font-variant-numeric:tabular-nums;letter-spacing:-.02em;text-shadow:var(--glow) rgba(34,197,94,.35)}
+.act-bars{display:flex;align-items:flex-end;gap:3px;height:28px}
+.act-bars span{width:5px;background:linear-gradient(180deg,var(--profit-soft),rgba(34,197,94,.35));border-radius:2px 2px 0 0}
+.stat3{display:grid;grid-template-columns:repeat(3,1fr);gap:.5rem;padding-top:.625rem;margin-top:.625rem;
+  border-top:1px solid var(--line);font-family:var(--mono);font-size:var(--fs-sm)}
+.stat3 .k{color:var(--fg-muted);display:block;font-size:var(--fs-xs);letter-spacing:.06em}
+
+/* ---- exit simulator ---- */
+.exit-combo{display:grid;grid-template-columns:repeat(12,1fr);gap:.5rem;background:var(--surface-2);
+  border:1px solid var(--line);border-radius:var(--radius-sm);padding:.625rem;align-items:center}
+.exit-main{grid-column:span 9;position:relative}
+.exit-hist{grid-column:span 3;height:144px;display:flex;flex-direction:column;justify-content:space-between;
+  padding-left:.5rem;border-left:1px solid var(--line)}
+.vbin-row{display:flex;align-items:center;justify-content:flex-end;height:8px}
+.vbin{height:100%;border-radius:2px 0 0 2px;transition:width var(--t-state) var(--ease)}
+.vbin.p{background:linear-gradient(90deg,rgba(34,197,94,.35),var(--profit))}
+.vbin.w{background:linear-gradient(90deg,rgba(245,158,11,.35),var(--warn))}
+.vbin.l{background:linear-gradient(90deg,rgba(239,68,68,.35),var(--loss))}
+.exit-foot{display:grid;grid-template-columns:repeat(3,1fr);gap:.5rem .75rem;padding-top:.625rem;margin-top:.5rem;
+  border-top:1px solid var(--line);font-family:var(--mono);font-size:var(--fs-base);font-variant-numeric:tabular-nums}
+@media(min-width:520px){.exit-foot{grid-template-columns:repeat(5,1fr)}}
+.foot-lab{color:var(--fg-muted);display:block;font-size:var(--fs-xs);letter-spacing:.06em}
+
+/* ---- cluster radar ---- */
+.radar-box{position:relative;background:var(--surface-2);border:1px solid var(--line);
+  border-radius:var(--radius-sm);height:144px;overflow:hidden}
+.legend{display:flex;align-items:center;justify-content:space-between;padding-top:.625rem;margin-top:.5rem;
+  border-top:1px solid var(--line);font-family:var(--mono);font-size:var(--fs-sm);color:var(--fg-muted)}
+.legend span{display:inline-flex;align-items:center;gap:5px}
+.dot{width:7px;height:7px;border-radius:9999px}
+.dot-sq{width:8px;height:8px;border-radius:2px}
+
+/* ---- the den ---- */
+.den-head{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:.5rem;
+  padding-bottom:.75rem;margin-bottom:.75rem;border-bottom:1px solid var(--line)}
+.den-title{display:flex;align-items:center;gap:.5rem}
+.den-title svg{width:15px;height:15px;color:var(--profit-soft)}
+.den-title span{font-size:var(--fs-md);font-family:var(--mono);font-weight:700;letter-spacing:.09em;color:var(--fg)}
+.den-btn{padding:6px 11px;border-radius:var(--radius-sm);background:var(--surface-2);border:1px solid var(--line-strong);
+  font-size:var(--fs-base);font-family:var(--mono);color:var(--fg);letter-spacing:.04em;
+  transition:background var(--t-micro) var(--ease),border-color var(--t-micro) var(--ease)}
+.den-btn:hover{background:var(--muted);border-color:var(--hud-dim)}
+
+.obs-col,.dec-col{display:flex;flex-direction:column;justify-content:space-between;gap:5px}
+.obs{background:var(--surface-2);border:1px solid var(--line);border-radius:var(--radius-sm);padding:6px 10px;
+  display:flex;align-items:center;justify-content:space-between;gap:.5rem;
+  transition:border-color var(--t-micro) var(--ease),background var(--t-micro) var(--ease)}
+.obs:hover{border-color:var(--hud-dim);background:var(--muted)}
+.obs-l{min-width:0}
+.obs-name{display:flex;align-items:center;gap:6px}
+.obs-name .d{width:6px;height:6px;border-radius:9999px;flex-shrink:0}
+.obs-name .t{font-size:var(--fs-sm);font-family:var(--mono);font-weight:600;color:var(--fg);
+  letter-spacing:.05em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.obs-sub{font-size:var(--fs-xs);font-family:var(--mono);color:var(--fg-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.obs-spark{width:62px;height:20px;flex-shrink:0;overflow:visible}
+.obs-r{text-align:right;font-family:var(--mono);flex-shrink:0;font-variant-numeric:tabular-nums}
+.obs-val{font-size:var(--fs-base);font-weight:700;color:var(--fg)}
+.obs-delta{font-size:var(--fs-xs);font-weight:500}
+
+.den-canvas-box{position:relative;background:var(--surface-3);border:1px solid var(--line);
+  border-radius:var(--radius);min-height:340px;overflow:hidden;display:flex;align-items:center;justify-content:center}
+@media(min-width:640px){.den-canvas-box{min-height:420px}}
+/* HUD scanline veil — subtle, keeps text legible */
+.den-canvas-box::after{content:'';position:absolute;inset:0;pointer-events:none;
+  background:repeating-linear-gradient(180deg,rgba(34,211,238,.035) 0 1px,transparent 1px 3px)}
+.den-overlay{position:absolute;bottom:10px;left:12px;right:12px;display:flex;align-items:center;
+  justify-content:space-between;gap:.5rem;font-size:var(--fs-sm);font-family:var(--mono);
+  color:var(--fg-muted);pointer-events:none;z-index:2;letter-spacing:.05em}
+.den-overlay .mode{color:var(--hud);text-shadow:var(--glow) rgba(34,211,238,.4)}
+@media(max-width:520px){.den-overlay .edge{display:none}}
+
+.dec{text-align:left;background:var(--surface-2);border:1px solid var(--line);border-radius:var(--radius-sm);
+  padding:6px 10px;transition:border-color var(--t-micro) var(--ease),background var(--t-micro) var(--ease);width:100%}
+.dec:hover{border-color:var(--hud-dim);background:var(--muted)}
+.dec[aria-pressed="true"]{border-color:rgba(34,197,94,.65);box-shadow:0 0 0 1px rgba(34,197,94,.28),inset 2px 0 0 var(--profit)}
+.dec-top{display:flex;align-items:center;justify-content:space-between;gap:.5rem}
+.dec-badge{padding:1px 6px;border-radius:3px;border:1px solid;font-size:var(--fs-xs);
+  font-family:var(--mono);font-weight:700;letter-spacing:.06em}
+.badge-buy{background:rgba(34,197,94,.18);color:var(--profit-soft);border-color:rgba(34,197,94,.45)}
+.badge-watch{background:rgba(245,158,11,.18);color:var(--warn-soft);border-color:rgba(245,158,11,.45)}
+.badge-skip{background:rgba(239,68,68,.18);color:var(--loss-soft);border-color:rgba(239,68,68,.45)}
+.dec-sym{font-size:var(--fs-md);font-family:var(--mono);font-weight:700;color:var(--fg)}
+.dec-score{font-size:15px;font-family:var(--mono);font-weight:700;font-variant-numeric:tabular-nums}
+.dec-reason{display:block;font-size:var(--fs-sm);font-family:var(--mono);color:var(--fg-muted);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px}
+.conf{display:block;width:100%;height:3px;background:var(--muted);border-radius:9999px;overflow:hidden;margin-top:6px}
+.conf > *{display:block;height:100%;border-radius:9999px;transition:width var(--t-state) var(--ease)}
+
+/* ---- slot buyer ---- */
+.slot-box{background:var(--surface-2);border:1px solid var(--line);border-radius:var(--radius-sm);
+  padding:.75rem;height:192px;display:flex;align-items:flex-end;justify-content:space-between;gap:5px}
+.slot-col{flex:1;height:100%;display:flex;flex-direction:column;justify-content:flex-end;align-items:center}
+.slot-stack{width:100%;max-width:22px;display:flex;flex-direction:column;justify-content:flex-end;
+  border-radius:3px 3px 0 0;overflow:hidden;transition:height var(--t-state) var(--ease)}
+.slot-stack .snipe{background:var(--warn);width:100%;opacity:.85}
+.slot-stack .arb{background:var(--info);width:100%;opacity:.85}
+.slot-stack .org{background:var(--profit);width:100%;opacity:.92}
+.slot-lab{font-size:var(--fs-xs);font-family:var(--mono);color:var(--fg-muted);margin-top:6px}
+
+/* ---- trade tape (sticky header) ---- */
+.tt-box{background:var(--surface-2);border:1px solid var(--line);border-radius:var(--radius-sm);
+  overflow:auto;flex:1;max-height:214px}
+table.tt{width:100%;text-align:left;border-collapse:collapse;font-family:var(--mono);
+  font-size:var(--fs-sm);font-variant-numeric:tabular-nums}
+table.tt thead th{position:sticky;top:0;z-index:1;background:var(--muted);color:var(--fg-muted);
+  padding:7px 8px;font-weight:600;letter-spacing:.06em;border-bottom:1px solid var(--line-strong);font-size:var(--fs-xs)}
+table.tt td{padding:6px 8px;border-top:1px solid var(--line)}
+table.tt tbody tr{transition:background var(--t-micro) var(--ease)}
+table.tt tbody tr:hover{background:var(--muted)}
+table.tt tbody tr:first-child{animation:rowin 320ms var(--ease)}
+.ta-r{text-align:right}
+
+/* ---- agent log ---- */
+.logf{display:flex;align-items:center;gap:3px;font-family:var(--mono);font-size:var(--fs-xs)}
+.logf button{padding:4px 7px;border-radius:3px;transition:all var(--t-micro) var(--ease);
+  background:var(--surface-2);color:var(--fg-muted);border:1px solid var(--line);letter-spacing:.05em}
+.logf button:hover{color:var(--fg);border-color:var(--line-strong)}
+.logf button[aria-pressed="true"]{background:rgba(34,197,94,.18);color:var(--profit-soft);border-color:rgba(34,197,94,.45)}
+.log-box{background:var(--surface-2);border:1px solid var(--line);border-radius:var(--radius-sm);
+  padding:.5rem;height:214px;overflow-y:auto;font-family:var(--mono);font-size:var(--fs-sm);
+  display:flex;flex-direction:column;gap:6px}
+.log-item{border-bottom:1px solid var(--line);padding-bottom:5px}
+.log-item:last-child{border-bottom:none}
+.log-item:first-child{animation:rowin 320ms var(--ease)}
+.log-meta{display:flex;align-items:center;gap:6px}
+.log-lvl{font-weight:700;letter-spacing:.05em}
+.log-msg{color:var(--fg-soft);line-height:1.45;margin-top:2px}
+.log-empty{color:var(--fg-muted);font-style:italic;padding:.5rem}
+</style>
+</head>
+<body>
+<!-- ===================== TOP COMMAND BAR ===================== -->
+<header class="topbar">
+  <div class="wrap topbar-inner">
+    <div class="brand">
+      <div class="brand-logo" aria-hidden="true">MW</div>
+      <div class="flC gap2">
+        <h1 class="brand-title">MINDWRITE TRADER <span class="sep">//</span> <span class="accent">SOLANA BOT</span></h1>
+        <span class="brand-badge">JITO-MEV • RPC STAKED</span>
+      </div>
+    </div>
+
+    <div class="hmetrics">
+      <div class="hm" id="hm-launches"><span class="hm-label">LAUNCHES 24H</span><span class="hm-val c-fg" id="m-launches">10.864</span></div>
+      <div class="hm" id="hm-blocked"><span class="hm-label">VETO / BLOCKED</span><span class="hm-val c-loss" id="m-blocked">7.130</span></div>
+      <div class="hm" id="hm-signals"><span class="hm-label">TRADE SIGNALS</span><span class="hm-val c-profit" id="m-signals">44</span></div>
+      <div class="hm hide-sm"><span class="hm-label">LATÊNCIA RPC</span><span class="hm-val c-info" id="m-latency">11ms</span></div>
+      <div class="hm hide-md"><span class="hm-label">UTC-3</span><span class="hm-val c-fg" id="m-clock">--:--:--</span></div>
+      <button id="stream-btn" class="stream-btn live tap" aria-pressed="true">
+        <span id="stream-icon" aria-hidden="true"></span><span id="stream-label">PAUSAR STREAM</span>
+      </button>
+    </div>
+  </div>
+
+  <div class="ticker">
+    <div class="wrap ticker-inner">
+      <span id="ticker-live" class="ticker-live on">
+        <span class="live-dot" aria-hidden="true"><span class="ping"></span><span></span></span>
+        <span id="ticker-live-label">LIVE FEED</span>
+      </span>
+      <div class="ticker-view"><div id="ticker-track" class="ticker-track" aria-hidden="true"></div></div>
+    </div>
+  </div>
+</header>
+
+<!-- ===================== MAIN ===================== -->
+<main>
+  <div class="wrap">
+
+    <!-- ===== TOP GRID ===== -->
+    <section class="grid-top" aria-label="Métricas do modelo, simulador de saída e mapa de clusters">
+      <!-- CORE MODEL -->
+      <div class="card card-col gt-3">
+        <div>
+          <div class="row" style="margin-bottom:.5rem">
+            <h2 class="mtitle">CORE MODEL <span class="sep">//</span> IN TRAINING</h2>
+            <span class="pill pill-hud">EPOCH 42</span>
+          </div>
+          <div class="train-box">
+            <div class="row mono" style="font-size:var(--fs-sm);color:var(--fg-muted);margin-bottom:5px">
+              <span>PRECISION / RECALL</span><span class="c-profit b">91.4%</span>
+            </div>
+            <svg viewBox="0 0 220 54" style="width:100%;height:48px;overflow:visible" role="img" aria-label="Curva de aprendizado subindo até 91,4 por cento">
+              <defs><linearGradient id="trainGrad" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stop-color="#22D3EE" stop-opacity="0.38"/>
+                <stop offset="100%" stop-color="#22D3EE" stop-opacity="0"/>
+              </linearGradient></defs>
+              <path d="M 0 46 Q 40 42, 75 31 T 150 18 T 220 7 L 220 54 L 0 54 Z" fill="url(#trainGrad)"/>
+              <path d="M 0 46 Q 40 42, 75 31 T 150 18 T 220 7" fill="none" stroke="#22D3EE" stroke-width="1.6"/>
+              <circle cx="150" cy="18" r="2.6" fill="#FBBF24"/>
+              <circle cx="220" cy="7" r="3.2" fill="#22C55E"/>
+            </svg>
+          </div>
+        </div>
+        <div>
+          <div class="mono" style="font-size:var(--fs-sm);color:var(--fg-muted);letter-spacing:.07em">ESTADOS PROCESSADOS HOJE</div>
+          <div class="flC" style="justify-content:space-between;align-items:flex-end;margin-top:4px">
+            <span class="big-counter" id="m-labels">1.292</span>
+            <div class="act-bars" id="act-bars" aria-hidden="true"></div>
+          </div>
+          <div class="stat3">
+            <div><span class="k">EVENTOS</span><span class="c-fg b">42</span></div>
+            <div><span class="k">WIN RATE</span><span class="c-profit b">71.4%</span></div>
+            <div><span class="k">SLOTS ATIVOS</span><span class="c-info b">4 / 6</span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- EXIT SIMULATOR -->
+      <div class="card card-col gt-6">
+        <div class="row-wrap" style="margin-bottom:.5rem">
+          <h2 class="mtitle">EXIT SIMULATOR <span class="sep">//</span> MONTE CARLO BARRIERS</h2>
+          <div class="flC gap3 mono" style="font-size:var(--fs-sm)">
+            <span class="c-profit">TP +32,00%</span>
+            <span class="c-info">ATUAL <span id="exit-atual" class="tnum">131,40</span></span>
+            <span class="c-loss">SL −12,00%</span>
+          </div>
+        </div>
+
+        <div class="exit-combo">
+          <div class="exit-main">
+            <svg viewBox="0 0 360 135" style="width:100%;height:144px;overflow:visible" role="img" aria-label="Trajetória de preço simulada entre as barreiras de take profit e stop loss">
+              <line x1="0" x2="360" y1="24" y2="24" stroke="#22C55E" stroke-dasharray="4 3" stroke-width="1"/>
+              <line x1="0" x2="360" y1="114" y2="114" stroke="#EF4444" stroke-dasharray="4 3" stroke-width="1"/>
+              <path d="M 0 112 Q 110 85, 220 65 T 360 22" fill="none" stroke="rgba(34,197,94,.2)" stroke-width="1"/>
+              <path d="M 0 112 Q 120 105, 240 96 T 360 88" fill="none" stroke="rgba(56,189,248,.2)" stroke-width="1"/>
+              <path d="M 0 112 Q 130 122, 250 128 T 360 132" fill="none" stroke="rgba(239,68,68,.2)" stroke-width="1"/>
+              <path id="exit-path" d="" fill="none" stroke="#F8FAFC" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"/>
+              <circle id="exit-point" cx="360" cy="20" r="3.6" fill="#22C55E" stroke="#020617" stroke-width="1.5"/>
+            </svg>
+          </div>
+          <div class="exit-hist" id="volume-bins" role="img" aria-label="Histograma de distribuição de volume de saídas"></div>
+        </div>
+
+        <div class="exit-foot">
+          <div><span class="foot-lab">SHARPE</span><span class="c-profit b">2,33</span></div>
+          <div><span class="foot-lab">RISK/REW</span><span class="c-info b">1 : 3,4</span></div>
+          <div><span class="foot-lab">EV / TRADE</span><span class="c-warn b">+0,42 SOL</span></div>
+          <div><span class="foot-lab">MAX GAIN</span><span class="c-profit b">+142,80%</span></div>
+          <div><span class="foot-lab">HOLD MÉDIO</span><span class="c-fg b">4m 18s</span></div>
+        </div>
+      </div>
+
+      <!-- CLUSTER MAP -->
+      <div class="card card-col gt-3">
+        <div class="row" style="margin-bottom:.5rem">
+          <h2 class="mtitle">CLUSTER MAP <span class="sep">//</span> ON-CHAIN</h2>
+          <span class="mono c-profit b" style="font-size:var(--fs-sm)" id="cluster-symbol">$WIFCAT</span>
+        </div>
+        <div class="radar-box"><canvas id="radar-canvas" role="img" aria-label="Radar de clusters on-chain com cinco nós monitorados"></canvas></div>
+        <div class="legend">
+          <span><span class="dot" style="background:var(--profit)"></span> Smart</span>
+          <span><span class="dot" style="background:var(--info)"></span> Whale</span>
+          <span><span class="dot" style="background:var(--loss)"></span> Bundler</span>
+          <span class="c-fg b">5 CLUSTERS</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== THE DEN ===== -->
+    <section class="card" aria-label="Motor neural The Den">
+      <div class="den-head">
+        <h2 class="den-title">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="4" y="4" width="16" height="16" rx="2"/><rect x="9" y="9" width="6" height="6"/>
+            <path d="M15 2v2M15 20v2M2 15h2M2 9h2M20 15h2M20 9h2M9 2v2M9 20v2"/>
+          </svg>
+          <span>THE DEN <span style="color:var(--fg-dim)">//</span> 7 CANAIS • 1.408 ESTADOS • 6 AGENTES</span>
+        </h2>
+        <button id="collapse-btn" class="den-btn tap" aria-pressed="false">COLAPSAR ESTADOS</button>
+      </div>
+
+      <div class="grid-den">
+        <div class="gd-3 obs-col" id="observables" aria-label="Sete canais observáveis"></div>
+        <div class="gd-6 den-canvas-box">
+          <canvas id="den-canvas" role="img" aria-label="Núcleo neural radial: sete canais observáveis convergindo ao centro e seis decisões saindo"></canvas>
+          <div class="den-overlay">
+            <span class="edge">OBSERVABLES IN (7)</span>
+            <span class="mode" id="den-mode">MODO: AMPLITUDE RADIAL 60 FPS</span>
+            <span class="edge">DECISIONS OUT (6)</span>
+          </div>
+        </div>
+        <div class="gd-3 dec-col" id="decisions" role="group" aria-label="Decision stack — selecione um token"></div>
+      </div>
+    </section>
+
+    <!-- ===== BOTTOM GRID ===== -->
+    <section class="grid-bottom" aria-label="Execução, fita de negócios e telemetria">
+      <div class="card card-col gb-5">
+        <div class="row-wrap" style="margin-bottom:.75rem">
+          <h2 class="mtitle">SLOT BUYER <span class="sep">//</span> EXECUÇÃO POR JANELA (400MS)</h2>
+          <div class="flC gap3 mono" style="font-size:var(--fs-sm)">
+            <span class="flC c-profit" style="gap:5px"><span class="dot-sq" style="background:var(--profit)"></span> Orgânico</span>
+            <span class="flC c-info" style="gap:5px"><span class="dot-sq" style="background:var(--info)"></span> Arb/MEV</span>
+            <span class="flC c-warn" style="gap:5px"><span class="dot-sq" style="background:var(--warn)"></span> Sniper</span>
+          </div>
+        </div>
+        <div class="slot-box" id="slotbars" role="img" aria-label="Barras empilhadas de execução por janela de slot"></div>
+      </div>
+
+      <div class="gb-7 grid-tt">
+        <div class="card" style="display:flex;flex-direction:column">
+          <div class="row" style="margin-bottom:10px">
+            <h2 class="mtitle">TRADE TAPE <span class="sep">//</span> TIME &amp; SALES</h2>
+            <span class="mono c-profit" style="font-size:var(--fs-sm)" id="tape-status">REAL-TIME</span>
+          </div>
+          <div class="tt-box scroll">
+            <table class="tt">
+              <caption class="sr-only">Últimas negociações executadas, atualizadas em tempo real</caption>
+              <thead><tr>
+                <th scope="col">HORA</th><th scope="col">PAR</th><th scope="col">LADO</th>
+                <th scope="col" class="ta-r">SOL</th><th scope="col" class="ta-r">SLOT</th>
+              </tr></thead>
+              <tbody id="tradetape"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="card" style="display:flex;flex-direction:column">
+          <div class="row-wrap gap2" style="margin-bottom:10px">
+            <h2 class="mtitle" style="white-space:nowrap">AGENT LOG <span class="sep">//</span> TELEMETRIA</h2>
+            <div class="logf" id="logfilter" role="group" aria-label="Filtrar log por nível">
+              <button data-lvl="ALL" class="tap" aria-pressed="true">ALL</button>
+              <button data-lvl="SIGNAL" class="tap" aria-pressed="false">SIGNAL</button>
+              <button data-lvl="ORDER" class="tap" aria-pressed="false">ORDER</button>
+              <button data-lvl="RISK" class="tap" aria-pressed="false">RISK</button>
+            </div>
+          </div>
+          <div class="log-box scroll" id="logs"></div>
+        </div>
+      </div>
+    </section>
+
+  </div>
+</main>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ===== formatação financeira consistente (Intl) ===== */
+  const nf0 = new Intl.NumberFormat('pt-BR',{minimumFractionDigits:0,maximumFractionDigits:0});
+  const nf2 = new Intl.NumberFormat('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
+  const nf5 = new Intl.NumberFormat('pt-BR',{minimumFractionDigits:5,maximumFractionDigits:5});
+  const fmtClock = (d) => d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  const esc = (s) => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  const $ = (id) => document.getElementById(id);
+  const rand = Math.random;
+
+  /* ===== preferências de movimento ===== */
+  const mqReduce = window.matchMedia('(prefers-reduced-motion: reduce)');
+  let reduced = mqReduce.matches;
+  mqReduce.addEventListener('change',(e)=>{ reduced=e.matches; applyMotion(); });
+  const animating = () => state.isLive && !reduced && !document.hidden;
+
+  const TAU = Math.PI*2;
+
+  /* Curva exata do token --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1).
+     Canvas nao aceita easing CSS, entao resolvemos a bezier unitaria
+     (Newton-Raphson) em vez de aproximar com um polinomio parecido. */
+  const bez=(p1x,p1y,p2x,p2y)=>{
+    const cx=3*p1x,bx=3*(p2x-p1x)-cx,ax=1-cx-bx;
+    const cy=3*p1y,by=3*(p2y-p1y)-cy,ay=1-cy-by;
+    const fx=t=>((ax*t+bx)*t+cx)*t, dfx=t=>(3*ax*t+2*bx)*t+cx;
+    return x=>{
+      let t=x;
+      for(let i=0;i<5;i++){
+        const d=fx(t)-x; if(Math.abs(d)<1e-5) break;
+        const q=dfx(t);  if(Math.abs(q)<1e-6) break;
+        t-=d/q;
+      }
+      t=t<0?0:t>1?1:t;
+      return ((ay*t+by)*t+cy)*t;
+    };
+  };
+  const easeInOut = bez(0.77,0,0.175,1);
+
+  /* Colapso do nucleo: tween por retargeting (nao keyframe), entao um
+     duplo-clique redireciona a partir do valor atual em vez de reiniciar. */
+  const CF_DUR=420;
+  let cfFrom=1, cfTo=1, cfT0=-1e9;
+  const cfNow=()=>{
+    if(reduced) return cfTo;
+    const k=Math.min(1,(performance.now()-cfT0)/CF_DUR);
+    return cfFrom+(cfTo-cfFrom)*easeInOut(k);
+  };
+  const retargetCollapse=()=>{
+    cfFrom=cfNow();
+    cfTo=state.collapseCore?0.45:1;
+    cfT0=performance.now();
+  };
+
+  /* ===== dados ===== */
+  const OBSERVABLES = [
+    {id:'wallet_flow',label:'WALLET FLOW',sub:'SMART MONEY • 1M',value:'+84,2%',delta:'+12,4%',positive:true,color:'#22C55E',spark:[42,48,45,53,61,59,68,74,72,81,84]},
+    {id:'creator_risk',label:'CREATOR RISK',sub:'DEV WALLET ENTROPY',value:'0,14',delta:'−0,06',positive:true,color:'#38BDF8',spark:[34,31,29,25,27,22,19,18,16,15,14]},
+    {id:'launch_rate',label:'LAUNCH RATE',sub:'NOVOS TOKENS / MIN',value:'46,8/m',delta:'+8,1%',positive:true,color:'#A855F7',spark:[28,32,30,35,39,37,41,44,43,45,47]},
+    {id:'liq_inflow',label:'LIQUIDITY INFLOW',sub:'SOL LIQUIDEZ / MIN',value:'312 SOL',delta:'+41,2%',positive:true,color:'#F59E0B',spark:[120,145,138,180,210,195,240,265,288,301,312]},
+    {id:'grad_rate',label:'GRADUATION RATE',sub:'CURVAS COMPLETAS 1H',value:'4,18%',delta:'+0,64%',positive:true,color:'#34D399',spark:[2.8,3.0,2.9,3.2,3.4,3.3,3.6,3.8,3.9,4.1,4.2]},
+    {id:'bundler_share',label:'BUNDLER SHARE',sub:'BLOCO 0 SNIPERS',value:'18,4%',delta:'−4,2%',positive:false,color:'#F43F5E',spark:[31,29,30,27,25,26,23,21,20,19,18]},
+    {id:'market_phase',label:'MARKET PHASE',sub:'REGIME VOLATILIDADE',value:'EXPANSÃO',delta:'0,88 IDX',positive:true,color:'#22D3EE',spark:[55,58,60,64,63,70,75,79,82,85,88]},
+  ];
+  const DECISIONS = [
+    {symbol:'$WIFCAT',score:94,action:'BUY',confidence:92,reason:'31 carteiras smart entraram no slot +2 • Liq 410 SOL',color:'#22C55E'},
+    {symbol:'$SOLAPEX',score:88,action:'BUY',confidence:86,reason:'Rompimento de curva 82% • Bundler share < 12%',color:'#38BDF8'},
+    {symbol:'$NEURAL',score:79,action:'WATCH',confidence:77,reason:'Aguardando confirmação de volume no pool Raydium',color:'#F59E0B'},
+    {symbol:'$ORBITX',score:72,action:'WATCH',confidence:70,reason:'Fluxo orgânico positivo • Spread ainda em 0,42%',color:'#A855F7'},
+    {symbol:'$ZAPMOON',score:34,action:'SKIP',confidence:89,reason:'VETO: 64% supply concentrado em 4 carteiras fundadoras',color:'#F43F5E'},
+    {symbol:'$BONKAI',score:21,action:'EXIT',confidence:95,reason:'Take-Profit +142% atingido • Trailing stop acionado',color:'#FB7185'},
+  ];
+  const TICKER_ITEMS = [
+    {tag:'NEW',text:'$WIFCAT • +412 SOL liquidez em 14s',tone:'var(--profit-soft)'},
+    {tag:'VETO',text:'$ZAPMOON • 31 carteiras no slot 0 bloqueadas',tone:'var(--loss-soft)'},
+    {tag:'ENTRY',text:'$SOLAPEX • Execução Jito Bundle #88412 (+0,02% slip)',tone:'var(--info)'},
+    {tag:'EXIT',text:'$BONKAI • TP2 atingido (+142,8% PnL líquido)',tone:'var(--warn-soft)'},
+    {tag:'SIGNAL',text:'Cluster Alpha-07 acumulando pares AI/Solana',tone:'var(--neutral)'},
+  ];
+
+  const state = {
+    isLive:true, latency:11, launchesCount:10864, blockedCount:7130, signalsCount:44, labelsToday:1292,
+    collapseCore:false, selectedSymbol:'$WIFCAT', logFilter:'ALL',
+    observables:OBSERVABLES.map(o=>({...o,spark:[...o.spark]})),
+    decisions:DECISIONS.map(d=>({...d})),
+    simSeries:[102.4,103.1,101.8,104.5,106.2,105.4,108.9,111.3,110.1,114.6,117.2,115.8,119.4,122.1,120.7,124.8,127.5,126.2,129.6,131.4],
+    volumeBins:[18,26,42,68,94,78,53,39,64,85,47,22],
+    slotBars:[
+      {slot:'S-12',snipe:24,organic:42,arb:14},{slot:'S-11',snipe:31,organic:38,arb:19},
+      {slot:'S-10',snipe:18,organic:54,arb:22},{slot:'S-09',snipe:45,organic:35,arb:16},
+      {slot:'S-08',snipe:28,organic:61,arb:25},{slot:'S-07',snipe:22,organic:58,arb:29},
+      {slot:'S-06',snipe:39,organic:49,arb:18},{slot:'S-05',snipe:19,organic:67,arb:24},
+      {slot:'S-04',snipe:34,organic:62,arb:27},{slot:'S-03',snipe:27,organic:71,arb:21},
+      {slot:'S-02',snipe:41,organic:64,arb:30},{slot:'S-01',snipe:33,organic:76,arb:28},
+    ],
+    tradeTape:[
+      {id:101,time:'21:05:54',pair:'$WIFCAT',side:'BUY',sol:14.50,slot:'+1'},
+      {id:102,time:'21:05:52',pair:'$SOLAPEX',side:'BUY',sol:8.20,slot:'+2'},
+      {id:103,time:'21:05:49',pair:'$BONKAI',side:'SELL',sol:22.80,slot:'0'},
+      {id:104,time:'21:05:46',pair:'$NEURAL',side:'BUY',sol:5.00,slot:'+3'},
+      {id:105,time:'21:05:43',pair:'$WIFCAT',side:'BUY',sol:19.40,slot:'+1'},
+      {id:106,time:'21:05:39',pair:'$ZAPMOON',side:'SELL',sol:31.10,slot:'0'},
+    ],
+    agentLogs:[
+      {id:1,time:'21:05:55',level:'SIGNAL',msg:'THE DEN: Colapso de estado #1408 → $WIFCAT score 94/100 (BUY)'},
+      {id:2,time:'21:05:53',level:'ORDER',msg:'Jito Tip 0,004 SOL enviado • Bundle confirmado no slot 298441920'},
+      {id:3,time:'21:05:50',level:'RISK',msg:'Filtro anti-bundler bloqueou $ZAPMOON (64% supply em 4 wallets)'},
+      {id:4,time:'21:05:47',level:'SIGNAL',msg:'Monte Carlo Exit Sim: Probabilidade TP1 (+35%) = 78,4%'},
+      {id:5,time:'21:05:44',level:'ORDER',msg:'Fill parcial $SOLAPEX: 638.420 tokens @ 0,01284 SOL'},
+    ],
+  };
+
+  /* ===== render estático ===== */
+  function renderTicker(){
+    const one = TICKER_ITEMS.map(it =>
+      `<span class="tk-item"><span class="tk-tag" style="color:${it.tone}">${esc(it.tag)}</span><span class="tk-text">${esc(it.text)}</span></span>`
+    ).join('');
+    $('ticker-track').innerHTML = one + one;
+  }
+  function renderActBars(){
+    $('act-bars').innerHTML = [35,52,44,68,82,74,95,88,100].map(b=>`<span style="height:${b}%"></span>`).join('');
+  }
+
+  /* ===== count-up (financial: number animations) ===== */
+  function setMetric(elId, wrapId, next, prev){
+    const el=$(elId);
+    if(reduced || Math.abs(next-prev)<2){ el.textContent=nf0.format(next); }
+    else {
+      const t0=performance.now(), dur=420;
+      const step=(t)=>{
+        const k=Math.min(1,(t-t0)/dur);
+        el.textContent=nf0.format(Math.round(prev+(next-prev)*(1-Math.pow(1-k,3))));
+        if(k<1) requestAnimationFrame(step);
+      };
+      requestAnimationFrame(step);
+    }
+    if(wrapId && next!==prev && !reduced){
+      const w=$(wrapId); w.classList.remove('tick'); void w.offsetWidth; w.classList.add('tick');
+    }
+  }
+
+  function renderHeader(prev){
+    prev = prev || {};
+    setMetric('m-launches','hm-launches',state.launchesCount, prev.launchesCount ?? state.launchesCount);
+    setMetric('m-blocked','hm-blocked',state.blockedCount, prev.blockedCount ?? state.blockedCount);
+    setMetric('m-signals','hm-signals',state.signalsCount, prev.signalsCount ?? state.signalsCount);
+    setMetric('m-labels',null,state.labelsToday, prev.labelsToday ?? state.labelsToday);
+    $('m-latency').textContent = state.isLive ? state.latency+'ms' : '—';
+  }
+
+  /* ===== observables ===== */
+  function sparkPoints(spark){
+    const mn=Math.min(...spark), mx=Math.max(...spark), rng=(mx-mn)||1;
+    return spark.map((v,i)=>((i/(spark.length-1))*76).toFixed(1)+','+(20-((v-mn)/rng)*16).toFixed(1)).join(' ');
+  }
+  function renderObservables(){
+    $('observables').innerHTML = state.observables.map(o=>`
+      <div class="obs">
+        <div class="obs-l">
+          <div class="obs-name"><span class="d" style="background:${o.color}"></span><span class="t">${esc(o.label)}</span></div>
+          <div class="obs-sub">${esc(o.sub)}</div>
+        </div>
+        <svg class="obs-spark" viewBox="0 0 76 22" aria-hidden="true"><polyline fill="none" stroke="${o.color}" stroke-width="1.5" stroke-linejoin="round" points="${sparkPoints(o.spark)}"/></svg>
+        <div class="obs-r">
+          <div class="obs-val">${esc(o.value)}</div>
+          <div class="obs-delta" style="color:${o.positive?'var(--profit-soft)':'var(--loss-soft)'}">${o.positive?'▲':'▼'} ${esc(o.delta)}</div>
+        </div>
+      </div>`).join('');
+  }
+
+  /* ===== decision stack ===== */
+  function renderDecisions(){
+    $('decisions').innerHTML = state.decisions.map(d=>{
+      const sel = state.selectedSymbol===d.symbol;
+      const badge = d.action==='BUY'?'badge-buy':d.action==='WATCH'?'badge-watch':'badge-skip';
+      return `
+      <button class="dec tap" data-symbol="${esc(d.symbol)}" aria-pressed="${sel}">
+        <span class="dec-top">
+          <span class="flC" style="gap:6px">
+            <span class="dec-badge ${badge}">${esc(d.action)}</span>
+            <span class="dec-sym">${esc(d.symbol)}</span>
+          </span>
+          <span class="dec-score" style="color:${d.color}">${d.score}</span>
+        </span>
+        <span class="dec-reason">${esc(d.reason)}</span>
+        <span class="conf"><span style="display:block;width:${d.confidence}%;height:100%;background:${d.color}"></span></span>
+      </button>`;
+    }).join('');
+  }
+
+  /* ===== exit simulator ===== */
+  function renderExitSim(){
+    const s=state.simSeries, w=360,h=135,min=95,range=45;
+    let d='', lx=360, ly=20;
+    for(let i=0;i<s.length;i++){
+      const x=(i/(s.length-1))*w, y=h-((s[i]-min)/range)*h;
+      d += (i===0?'M':'L')+' '+x.toFixed(1)+' '+y.toFixed(1)+' ';
+      lx=x; ly=y;
+    }
+    $('exit-path').setAttribute('d',d.trim());
+    const pt=$('exit-point'); pt.setAttribute('cx',lx.toFixed(1)); pt.setAttribute('cy',ly.toFixed(1));
+    $('exit-atual').textContent = nf2.format(s[s.length-1]);
+    $('volume-bins').innerHTML = state.volumeBins.map((b,i)=>{
+      const cls = i<3?'p':i>9?'l':'w';
+      return `<div class="vbin-row"><div class="vbin ${cls}" style="width:${b}%"></div></div>`;
+    }).join('');
+  }
+
+  /* ===== slot buyer ===== */
+  function renderSlotBars(){
+    $('slotbars').innerHTML = state.slotBars.map(b=>{
+      const total=b.snipe+b.organic+b.arb, scale=Math.min(100,(total/150)*100);
+      return `<div class="slot-col">
+        <div class="slot-stack" style="height:${scale}%">
+          <div class="snipe" style="height:${(b.snipe/total)*100}%"></div>
+          <div class="arb" style="height:${(b.arb/total)*100}%"></div>
+          <div class="org" style="height:${(b.organic/total)*100}%"></div>
+        </div>
+        <span class="slot-lab">${esc(b.slot)}</span>
+      </div>`;
+    }).join('');
+  }
+
+  /* ===== trade tape ===== */
+  function renderTradeTape(){
+    $('tradetape').innerHTML = state.tradeTape.slice(0,7).map(t=>`
+      <tr>
+        <td class="c-mut">${esc(t.time)}</td>
+        <td class="b c-fg">${esc(t.pair)}</td>
+        <td><span class="b" style="color:${t.side==='BUY'?'var(--profit-soft)':'var(--loss-soft)'}">${t.side==='BUY'?'▲':'▼'} ${esc(t.side)}</span></td>
+        <td class="ta-r c-fg">${nf2.format(t.sol)}</td>
+        <td class="ta-r c-info">${esc(t.slot)}</td>
+      </tr>`).join('');
+  }
+
+  /* ===== agent log ===== */
+  function renderLogs(){
+    const logs = state.logFilter==='ALL' ? state.agentLogs : state.agentLogs.filter(l=>l.level===state.logFilter);
+    if(!logs.length){ $('logs').innerHTML = `<p class="log-empty">Sem eventos ${esc(state.logFilter)} na janela atual.</p>`; return; }
+    $('logs').innerHTML = logs.map(l=>{
+      const col = l.level==='SIGNAL'?'var(--info)':l.level==='ORDER'?'var(--profit-soft)':'var(--warn-soft)';
+      return `<div class="log-item">
+        <div class="log-meta"><span class="c-dim">${esc(l.time)}</span><span class="log-lvl" style="color:${col}">[${esc(l.level)}]</span></div>
+        <p class="log-msg">${esc(l.msg)}</p>
+      </div>`;
+    }).join('');
+  }
+
+  /* ===== toggles ===== */
+  const ICON_PAUSE = '<svg viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/></svg>';
+  const ICON_PLAY  = '<svg viewBox="0 0 24 24" fill="currentColor"><polygon points="6 3 20 12 6 21 6 3"/></svg>';
+
+  function applyMotion(){
+    $('ticker-track').classList.toggle('paused', !state.isLive || reduced);
+  }
+  function updateStreamUI(){
+    const btn=$('stream-btn');
+    btn.className='stream-btn tap '+(state.isLive?'live':'paused');
+    btn.setAttribute('aria-pressed', String(state.isLive));
+    btn.setAttribute('aria-label', state.isLive?'Pausar stream de telemetria ao vivo':'Retomar stream de telemetria ao vivo');
+    $('stream-icon').innerHTML = state.isLive?ICON_PAUSE:ICON_PLAY;
+    $('stream-label').textContent = state.isLive?'PAUSAR STREAM':'RETOMAR STREAM';
+    const pill=$('ticker-live');
+    pill.className='ticker-live '+(state.isLive?'on':'off');
+    $('ticker-live-label').textContent = state.isLive?'LIVE FEED':'PAUSADO';
+    $('tape-status').textContent = state.isLive?'REAL-TIME':'CONGELADO';
+    $('tape-status').style.color = state.isLive?'var(--profit-soft)':'var(--warn-soft)';
+    $('m-latency').textContent = state.isLive ? state.latency+'ms' : '—';
+    applyMotion();
+  }
+  function updateCollapseUI(){
+    const b=$('collapse-btn');
+    b.textContent = state.collapseCore?'EXPANDIR NÚCLEO':'COLAPSAR ESTADOS';
+    b.setAttribute('aria-pressed', String(state.collapseCore));
+    $('den-mode').textContent = state.collapseCore?'MODO: COLAPSO DE DECISÃO':'MODO: AMPLITUDE RADIAL 60 FPS';
+  }
+
+  /* ===== telemetria ===== */
+  function telemetry(){
+    if(!state.isLive) return;
+    const now=new Date();
+    const prev={launchesCount:state.launchesCount,blockedCount:state.blockedCount,
+                signalsCount:state.signalsCount,labelsToday:state.labelsToday};
+
+    state.latency=Math.floor(8+rand()*9);
+    state.launchesCount+=Math.floor(rand()*3);
+    if(rand()>0.45) state.blockedCount++;
+    if(rand()>0.78) state.signalsCount++;
+    if(rand()>0.6) state.labelsToday++;
+
+    const last=state.simSeries[state.simSeries.length-1];
+    state.simSeries=state.simSeries.slice(1).concat(
+      Number(Math.max(96,Math.min(138,last+(rand()-0.46)*2.6)).toFixed(2)));
+
+    state.volumeBins=state.volumeBins.map((v,i)=>
+      (i===4||i===9||rand()>0.65) ? Math.max(12,Math.min(98,v+Math.floor((rand()-0.48)*10))) : v);
+
+    state.observables=state.observables.map(o=>{
+      const l=o.spark[o.spark.length-1];
+      return {...o,spark:o.spark.slice(1).concat(Number(Math.max(1,l+(rand()-0.47)*(l*0.06||1)).toFixed(2)))};
+    });
+
+    state.decisions=state.decisions.map(d=>({...d,
+      score:Math.max(12,Math.min(98,d.score+(rand()>0.6?(rand()>0.5?1:-1):0)))}));
+
+    state.slotBars=state.slotBars.slice(1).concat({
+      slot:'S-'+Math.floor(10+rand()*89), snipe:Math.floor(15+rand()*32),
+      organic:Math.floor(42+rand()*40), arb:Math.floor(12+rand()*22)});
+
+    const pairs=['$WIFCAT','$SOLAPEX','$NEURAL','$ORBITX','$BONKAI'];
+    const pair=pairs[Math.floor(rand()*pairs.length)];
+    const isBuy=rand()>0.32;
+    const trade={id:Date.now()+rand(),time:fmtClock(now),pair,side:isBuy?'BUY':'SELL',
+      sol:Number((2.5+rand()*24).toFixed(2)), slot:isBuy?'+'+Math.ceil(rand()*3):'0'};
+    state.tradeTape=[trade].concat(state.tradeTape.slice(0,11));
+
+    const pool=[
+      {level:'SIGNAL',msg:'THE DEN: Amplitude radial 0,91 • '+pair+' convergiu no canal Smart Flow'},
+      {level:'ORDER',msg:'Roteamento RPC Helius Staked: '+(isBuy?'COMPRA':'VENDA')+' '+nf2.format(trade.sol)+' SOL em '+pair+' ('+state.latency+'ms)'},
+      {level:'RISK',msg:'Check de liquidez & rug-shield OK para '+pair+' • Slippage máx 0,35%'},
+    ];
+    const ch=pool[Math.floor(rand()*pool.length)];
+    state.agentLogs=[{id:Date.now()+rand(),time:fmtClock(now),level:ch.level,msg:ch.msg}].concat(state.agentLogs.slice(0,29));
+
+    renderHeader(prev); renderObservables(); renderDecisions();
+    renderExitSim(); renderSlotBars(); renderTradeTape(); renderLogs();
+  }
+
+  /* ===== CANVAS 1 — NÚCLEO RADIAL "THE DEN" ===== */
+  function startDen(){
+    const canvas=$('den-canvas'); if(!canvas) return;
+    const ctx=canvas.getContext('2d');
+
+    /* Campo de partículas em 3 camadas de profundidade.
+       Camadas contra-rotacionam (parallax) e recuam por alfa/tamanho,
+       em vez de 260 raios idênticos saindo do centro. */
+    const SPEC=[
+      {n:200,cols:['#3A4A63'],                     lineA:.13,dotA:.26,size:0.7,lw:.7,trail:.10,lo:.20,hi:.54,spd:.50,dir: 1},
+      {n:130,cols:['#44546B','#38BDF8'],           lineA:.16,dotA:.52,size:1.1,lw:.8,trail:.09,lo:.44,hi:.76,spd:.80,dir:-1},
+      {n:70, cols:['#22C55E','#38BDF8','#F59E0B'], lineA:.26,dotA:.90,size:1.6,lw:.9,trail:.12,lo:.62,hi:.92,spd:1.10,dir: 1},
+      {n:20, cols:['#FBBF24','#34D399'],           lineA:.34,dotA:1  ,size:2.2,lw:1.1,trail:.16,lo:.86,hi:1.02,spd:1.35,dir: 1},
+    ];
+    /* Pré-agrupado por camada+cor: 6 lotes → 12 draw calls/frame (antes: 520). */
+    const groups=[];
+    SPEC.forEach(L=>L.cols.forEach((col,ci)=>{
+      const items=[];
+      for(let i=ci;i<L.n;i+=L.cols.length){
+        items.push({a:(i/L.n)*TAU+(rand()-.5)*.3, lr:L.lo+rand()*(L.hi-L.lo),
+                    s:(0.0012+rand()*0.0022)*L.spd*L.dir, ph:rand()*TAU, _x:0, _y:0});
+      }
+      groups.push({L,col,items});
+    }));
+
+    /* Dimensões e gradientes cacheados — sem getBoundingClientRect por frame
+       (que forçava reflow síncrono 60×/s). */
+    let W=0,H=0,DPR=1,bgGrad=null,nucGrad=null;
+    const sync=()=>{
+      const r=canvas.getBoundingClientRect();
+      if(!r.width||!r.height) return;
+      /* Campo de particulas com glows suaves nao desenha texto, entao DPR 1.5
+         basta: em tela retina corta ~44% dos pixels por frame sem perda visivel.
+         O radar continua em DPR 2 porque rotula os nos. */
+      DPR=Math.min(window.devicePixelRatio||1,1.5);
+      const cw=Math.floor(r.width*DPR), ch=Math.floor(r.height*DPR);
+      if(canvas.width!==cw||canvas.height!==ch){canvas.width=cw;canvas.height=ch;}
+      W=r.width; H=r.height;
+      const cx=W*.5, cy=H*.5, R=Math.min(W*.36,H*.44);
+      bgGrad=ctx.createRadialGradient(cx,cy,4,cx,cy,R*1.15);
+      bgGrad.addColorStop(0,'rgba(34,197,94,0.16)');
+      bgGrad.addColorStop(0.45,'rgba(34,211,238,0.06)');
+      bgGrad.addColorStop(1,'rgba(2,6,23,0)');
+      nucGrad=ctx.createRadialGradient(cx,cy,0,cx,cy,34);
+      nucGrad.addColorStop(0,'rgba(34,197,94,.5)');
+      nucGrad.addColorStop(1,'rgba(34,197,94,0)');
+    };
+    new ResizeObserver(sync).observe(canvas); sync();
+
+    let tick=0;
+    const render=()=>{
+      if(document.hidden||!W){ requestAnimationFrame(render); return; }
+      ctx.save(); ctx.scale(DPR,DPR); ctx.clearRect(0,0,W,H);
+      const adv=animating();
+      if(adv) tick+=0.025;
+
+      const cx=W*.5, cy=H*.5, R=Math.min(W*.36,H*.44), cf=cfNow();
+
+      ctx.fillStyle=bgGrad;
+      ctx.beginPath(); ctx.arc(cx,cy,R*1.15,0,TAU); ctx.fill();
+
+      ctx.lineWidth=1;
+      [[.35,'rgba(30,38,56,.7)',null],[.68,'rgba(30,38,56,.7)',[3,4]],[.98,'rgba(42,52,73,.6)',null]]
+      .forEach(([r,c,d])=>{
+        ctx.strokeStyle=c; ctx.setLineDash(d||[]);
+        ctx.beginPath(); ctx.arc(cx,cy,R*r*cf,0,TAU); ctx.stroke();
+      });
+      ctx.setLineDash([]);
+
+      /* 7 canais observáveis → núcleo */
+      const left=['#22C55E','#38BDF8','#A855F7','#F59E0B','#34D399','#F43F5E','#22D3EE'];
+      left.forEach((col,i)=>{
+        const sy=((i+0.5)/left.length)*H, a=Math.PI+((i-3)*0.24);
+        const ex=cx+Math.cos(a)*(R*0.20*cf), ey=cy+Math.sin(a)*(R*0.20*cf);
+        ctx.strokeStyle=col; ctx.globalAlpha=0.5; ctx.lineWidth=1.3;
+        ctx.beginPath(); ctx.moveTo(0,sy); ctx.bezierCurveTo(W*0.22,sy,cx-R*0.65,ey,ex,ey); ctx.stroke();
+        const p=(tick*0.45+i*0.17)%1, q=1-p;
+        const px=3*q*q*p*(W*0.22)+3*q*p*p*(cx-R*0.65)+p*p*p*ex;
+        const py=q*q*q*sy+3*q*q*p*sy+3*q*p*p*ey+p*p*p*ey;
+        ctx.globalAlpha=0.95; ctx.fillStyle=col;
+        ctx.beginPath(); ctx.arc(px,py,2.5,0,TAU); ctx.fill();
+      });
+
+      /* núcleo → 6 decisões */
+      state.decisions.forEach((d,i)=>{
+        const ey=((i+0.5)/state.decisions.length)*H, a=(i-2.5)*0.26;
+        const sx=cx+Math.cos(a)*(R*0.22*cf), sy=cy+Math.sin(a)*(R*0.22*cf);
+        ctx.strokeStyle=d.color; ctx.globalAlpha=d.action==='BUY'?0.7:0.32;
+        ctx.lineWidth=d.action==='BUY'?1.7:1;
+        ctx.beginPath(); ctx.moveTo(sx,sy); ctx.bezierCurveTo(cx+R*0.65,sy,W*0.78,ey,W,ey); ctx.stroke();
+        if(d.action==='BUY'||d.action==='WATCH'){
+          const p=(tick*0.55+i*0.21)%1, q=1-p;
+          const px=q*q*q*sx+3*q*q*p*(cx+R*0.65)+3*q*p*p*(W*0.78)+p*p*p*W;
+          const py=q*q*q*sy+3*q*q*p*sy+3*q*p*p*ey+p*p*p*ey;
+          ctx.globalAlpha=1; ctx.fillStyle=d.color;
+          ctx.beginPath(); ctx.arc(px,py,2.7,0,TAU); ctx.fill();
+        }
+      });
+
+      /* campo de partículas — um path por lote, rastro em vez de raio central */
+      for(let g=0;g<groups.length;g++){
+        const G=groups[g], L=G.L, it=G.items, n=it.length;
+        if(adv) for(let i=0;i<n;i++) it[i].a+=it[i].s;
+
+        ctx.globalAlpha=L.lineA; ctx.strokeStyle=G.col; ctx.lineWidth=L.lw;
+        ctx.beginPath();
+        for(let i=0;i<n;i++){
+          const p=it[i];
+          const wv=0.90+Math.sin(tick*1.6+p.ph)*0.10;
+          const r=R*p.lr*wv*cf, r0=r-R*L.trail*cf;
+          const c=Math.cos(p.a), s=Math.sin(p.a);
+          p._x=cx+c*r; p._y=cy+s*r;
+          ctx.moveTo(cx+c*r0,cy+s*r0); ctx.lineTo(p._x,p._y);
+        }
+        ctx.stroke();
+
+        ctx.globalAlpha=L.dotA; ctx.fillStyle=G.col;
+        ctx.beginPath();
+        for(let i=0;i<n;i++){
+          const p=it[i];
+          ctx.moveTo(p._x+L.size,p._y);
+          ctx.arc(p._x,p._y,L.size,0,TAU);
+        }
+        ctx.fill();
+      }
+      ctx.globalAlpha=1;
+
+      /* núcleo central */
+      ctx.fillStyle=nucGrad; ctx.beginPath(); ctx.arc(cx,cy,34,0,TAU); ctx.fill();
+      ctx.fillStyle='#020617'; ctx.beginPath(); ctx.arc(cx,cy,17,0,TAU); ctx.fill();
+      ctx.strokeStyle='#22C55E'; ctx.lineWidth=1.6;
+      ctx.beginPath(); ctx.arc(cx,cy,17+Math.sin(tick*2.4)*1.8,0,TAU); ctx.stroke();
+      ctx.fillStyle='#22C55E'; ctx.beginPath(); ctx.arc(cx,cy,4.5,0,TAU); ctx.fill();
+
+      ctx.restore();
+      requestAnimationFrame(render);
+    };
+    requestAnimationFrame(render);
+  }
+
+  /* ===== CANVAS 2 — RADAR DE CLUSTERS ===== */
+  function startRadar(){
+    const canvas=$('radar-canvas'); if(!canvas) return;
+    const ctx=canvas.getContext('2d');
+    const nodes=[
+      {id:'A1',x:0.34,y:0.38,r:4.5,color:'#22C55E',label:'Smart #01'},
+      {id:'A2',x:0.64,y:0.32,r:4,color:'#38BDF8',label:'Whale SOL'},
+      {id:'A3',x:0.72,y:0.63,r:4.5,color:'#F59E0B',label:'Jito Tip'},
+      {id:'A4',x:0.42,y:0.71,r:4,color:'#F43F5E',label:'Bundler'},
+      {id:'A5',x:0.52,y:0.49,r:6,color:'#A855F7',label:'$WIFCAT'},
+    ];
+    let sweep=0;
+    let w=0,h=0,dpr=1;
+    const sync=()=>{
+      const r=canvas.getBoundingClientRect();
+      if(!r.width||!r.height) return;
+      dpr=Math.min(window.devicePixelRatio||1,2);
+      const cw=Math.floor(r.width*dpr), ch=Math.floor(r.height*dpr);
+      if(canvas.width!==cw||canvas.height!==ch){canvas.width=cw;canvas.height=ch;}
+      w=r.width; h=r.height;
+    };
+    new ResizeObserver(sync).observe(canvas); sync();
+
+    const draw=()=>{
+      if(document.hidden||!w){ requestAnimationFrame(draw); return; }
+      ctx.save(); ctx.scale(dpr,dpr); ctx.clearRect(0,0,w,h);
+      if(animating()) sweep+=0.025;
+      const cx=w*0.5, cy=h*0.5, R=Math.min(w,h)*0.43;
+
+      [0.33,0.66,1].forEach(r=>{
+        ctx.strokeStyle='rgba(30,38,56,0.95)'; ctx.lineWidth=1;
+        ctx.beginPath(); ctx.arc(cx,cy,R*r,0,Math.PI*2); ctx.stroke();
+      });
+      ctx.strokeStyle='rgba(30,38,56,0.75)';
+      ctx.beginPath(); ctx.moveTo(cx-R,cy); ctx.lineTo(cx+R,cy);
+      ctx.moveTo(cx,cy-R); ctx.lineTo(cx,cy+R); ctx.stroke();
+
+      const sg=ctx.createLinearGradient(cx,cy,cx+Math.cos(sweep)*R,cy+Math.sin(sweep)*R);
+      sg.addColorStop(0,'rgba(34,197,94,.7)'); sg.addColorStop(1,'rgba(34,197,94,0)');
+      ctx.strokeStyle=sg; ctx.lineWidth=1.6;
+      ctx.beginPath(); ctx.moveTo(cx,cy); ctx.lineTo(cx+Math.cos(sweep)*R,cy+Math.sin(sweep)*R); ctx.stroke();
+
+      const c=nodes[4];
+      nodes.slice(0,4).forEach(n=>{
+        ctx.strokeStyle=n.id==='A4'?'rgba(239,68,68,0.45)':'rgba(56,189,248,0.3)'; ctx.lineWidth=1;
+        ctx.beginPath(); ctx.moveTo(c.x*w,c.y*h); ctx.lineTo(n.x*w,n.y*h); ctx.stroke();
+      });
+      nodes.forEach((n,i)=>{
+        const nx=n.x*w, ny=n.y*h, pulse=Math.sin(sweep*2+i)*2;
+        ctx.fillStyle=n.color; ctx.globalAlpha=0.22;
+        ctx.beginPath(); ctx.arc(nx,ny,n.r+4+pulse,0,Math.PI*2); ctx.fill();
+        ctx.globalAlpha=1; ctx.beginPath(); ctx.arc(nx,ny,n.r,0,Math.PI*2); ctx.fill();
+        ctx.fillStyle='#94A3B8'; ctx.font='9px "Fira Code", monospace';
+        ctx.fillText(n.label,nx+7,ny+3);
+      });
+      ctx.restore();
+      requestAnimationFrame(draw);
+    };
+    requestAnimationFrame(draw);
+  }
+
+  /* ===== eventos ===== */
+  $('stream-btn').addEventListener('click',()=>{ state.isLive=!state.isLive; updateStreamUI(); });
+  $('collapse-btn').addEventListener('click',()=>{
+    state.collapseCore=!state.collapseCore; retargetCollapse(); updateCollapseUI();
+  });
+  $('decisions').addEventListener('click',(e)=>{
+    const b=e.target.closest('[data-symbol]'); if(!b) return;
+    state.selectedSymbol=b.dataset.symbol;
+    $('cluster-symbol').textContent=state.selectedSymbol;
+    renderDecisions();
+  });
+  $('logfilter').addEventListener('click',(e)=>{
+    const b=e.target.closest('[data-lvl]'); if(!b) return;
+    state.logFilter=b.dataset.lvl;
+    [...$('logfilter').children].forEach(x=>x.setAttribute('aria-pressed',String(x.dataset.lvl===state.logFilter)));
+    renderLogs();
+  });
+
+  /* timer cleanup + visibility pause */
+  let timer=null;
+  const startTimer=()=>{ if(!timer) timer=setInterval(telemetry,1400); };
+  const stopTimer =()=>{ if(timer){ clearInterval(timer); timer=null; } };
+  document.addEventListener('visibilitychange',()=>{ document.hidden?stopTimer():startTimer(); });
+
+  /* ===== init ===== */
+  renderTicker(); renderActBars(); renderHeader(); renderObservables(); renderDecisions();
+  renderExitSim(); renderSlotBars(); renderTradeTape(); renderLogs();
+  updateStreamUI(); updateCollapseUI();
+  $('m-clock').textContent=fmtClock(new Date());
+  setInterval(()=>{ $('m-clock').textContent=fmtClock(new Date()); },1000);
+  startTimer(); startDen(); startRadar();
+})();
+</script>
+</body>
+</html>
